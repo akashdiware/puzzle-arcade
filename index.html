@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Puzzle Arcade</title>
+  <style>
+    :root {
+      --bg: #0f1226;
+      --panel: #171b39;
+      --accent: #6c8cff;
+      --text: #e9ecff;
+      --muted: #9aa3c7;
+      --win: #27c93f;
+      --lose: #ff5f56;
+      --tile: #22274f;
+      --tile-2: #2a3166;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color: var(--text);
+      background: radial-gradient(1200px 700px at 80% -10%, #222a66 0%, transparent 60%),
+                  radial-gradient(900px 500px at 20% -10%, #183058 0%, transparent 60%),
+                  var(--bg);
+      min-height: 100vh;
+    }
+    header {
+      position: sticky; top: 0; z-index: 5;
+      background: rgba(12,14,30,.7);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid #24294d;
+    }
+    .container { max-width: 1100px; margin: 0 auto; padding: 16px; }
+    h1 { margin: 0; font-size: 28px; letter-spacing: .5px; }
+    .muted { color: var(--muted); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 16px;
+      padding: 16px;
+    }
+    @media (max-width: 900px){ .grid { grid-template-columns: 1fr; } }
+
+    .panel {
+      background: linear-gradient(180deg, #151a35 0%, #121633 100%);
+      border: 1px solid #262b55;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    .panel h2 {
+      font-size: 16px; margin: 0; padding: 14px 16px; border-bottom: 1px solid #232750;
+      color: #cdd6ff; letter-spacing: .3px;
+    }
+    .panel .body { padding: 14px 16px; }
+
+    .games-list { display: grid; gap: 8px; }
+    .games-list button {
+      width: 100%; text-align: left; padding: 12px; border-radius: 10px; border: 1px solid #2a2f5c;
+      background: linear-gradient(180deg, #191f42, #151a34);
+      color: var(--text); cursor: pointer; transition: .15s transform, .2s border-color, .2s box-shadow;
+    }
+    .games-list button.active, .games-list button:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(108,140,255,.12);
+      transform: translateY(-1px);
+    }
+
+    .workspace { padding: 16px; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .tab {
+      padding: 8px 12px; border-radius: 999px; background: #161a39; border: 1px solid #2a2f5c; cursor: pointer;
+      color: var(--muted);
+    }
+    .tab.active { color: var(--text); border-color: var(--accent); box-shadow: 0 0 0 3px rgba(108,140,255,.12); }
+
+    /* Game areas */
+    .game { display: none; }
+    .game.active { display: block; }
+
+    /* Tic Tac Toe */
+    .ttt {
+      display: grid; grid-template-columns: repeat(3, 110px); gap: 10px; justify-content: center; padding: 10px;
+    }
+    .ttt button { height: 110px; font-size: 42px; font-weight: 700; border-radius: 12px; border: 1px solid #30366e; background: linear-gradient(180deg, #1b2148, #14193a); color: #dfe6ff; cursor: pointer; transition: .2s; }
+    .ttt button:hover { border-color: var(--accent); }
+    .row { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+
+    /* 2048 */
+    .board2048 { width: 330px; margin: 12px auto; background: #111432; padding: 12px; border-radius: 12px; border: 1px solid #282d61; }
+    .grid2048 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .tile { height: 65px; background: var(--tile); display: flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: 800; font-size: 22px; color: #fff; }
+    .t-0 { background: #1a1f48; color: transparent; }
+    .t-2 { background: #39459a; }
+    .t-4 { background: #3a74c8; }
+    .t-8 { background: #e67e22; }
+    .t-16 { background: #d35400; }
+    .t-32 { background: #c0392b; }
+    .t-64 { background: #a93226; }
+    .t-128 { background: #27ae60; }
+    .t-256 { background: #16a085; }
+    .t-512 { background: #2980b9; }
+    .t-1024 { background: #8e44ad; }
+    .t-2048 { background: #f1c40f; color: #111; }
+
+    /* Memory Match */
+    .memory { display: grid; grid-template-columns: repeat(4, 90px); gap: 10px; justify-content: center; margin-top: 10px; }
+    .card { width: 90px; height: 110px; perspective: 700px; }
+    .card-inner { position: relative; width: 100%; height: 100%; transition: transform .4s; transform-style: preserve-3d; cursor: pointer; }
+    .flipped .card-inner { transform: rotateY(180deg); }
+    .face { position: absolute; inset: 0; border-radius: 10px; display: grid; place-items: center; font-size: 30px; backface-visibility: hidden; border: 1px solid #2b3061; }
+    .front { background: linear-gradient(180deg, #1a1f48, #13173b); }
+    .back { background: linear-gradient(180deg, #24307a, #1f285f); transform: rotateY(180deg); }
+
+    .status { text-align: center; margin-top: 10px; color: var(--muted); }
+    .controls { text-align: center; margin-top: 12px; }
+    .btn { background: #1a1f48; border: 1px solid #2b3061; color: var(--text); padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+    .btn:hover { border-color: var(--accent); }
+
+    footer { text-align: center; padding: 24px; color: var(--muted); }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>Puzzle Arcade <span class="muted">— mini games hub</span></h1>
+    </div>
+  </header>
+
+  <div class="container grid">
+    <aside class="panel">
+      <h2>Games</h2>
+      <div class="body games-list">
+        <button class="game-link active" data-target="#ttt">Tic Tac Toe</button>
+        <button class="game-link" data-target="#g2048">2048</button>
+        <button class="game-link" data-target="#memory">Memory Match</button>
+      </div>
+    </aside>
+
+    <main class="panel workspace">
+      <div class="tabs">
+        <div class="tab active" data-target="#ttt">Tic Tac Toe</div>
+        <div class="tab" data-target="#g2048">2048</div>
+        <div class="tab" data-target="#memory">Memory Match</div>
+      </div>
+
+      <section id="ttt" class="game active">
+        <div class="status" id="tttStatus">Player X's turn</div>
+        <div class="ttt" id="tttBoard"></div>
+        <div class="row">
+          <button class="btn" id="tttReset">Reset</button>
+        </div>
+      </section>
+
+      <section id="g2048" class="game">
+        <div class="status" id="g2048Status">Use arrow keys or swipe</div>
+        <div class="board2048">
+          <div class="grid2048" id="grid2048"></div>
+        </div>
+        <div class="row">
+          <button class="btn" id="g2048Reset">New Game</button>
+        </div>
+      </section>
+
+      <section id="memory" class="game">
+        <div class="status" id="memStatus">Find all pairs</div>
+        <div class="memory" id="memGrid"></div>
+        <div class="row">
+          <button class="btn" id="memReset">Restart</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    Built with love for puzzles. Tip: Add to GitHub Pages to share!
+  </footer>
+
+  <script>
+    // Tabs and nav sync
+    const tabs = document.querySelectorAll('.tab');
+    const links = document.querySelectorAll('.game-link');
+    const games = document.querySelectorAll('.game');
+    function activate(target){
+      tabs.forEach(t=>t.classList.toggle('active', t.dataset.target===target));
+      links.forEach(l=>l.classList.toggle('active', l.dataset.target===target));
+      games.forEach(g=>g.classList.toggle('active', '#'+g.id===target));
+    }
+    tabs.forEach(t=>t.addEventListener('click', ()=>activate(t.dataset.target)));
+    links.forEach(l=>l.addEventListener('click', ()=>activate(l.dataset.target)));
+
+    // Tic Tac Toe
+    const tttBoard = document.getElementById('tttBoard');
+    const tttStatus = document.getElementById('tttStatus');
+    const tttReset = document.getElementById('tttReset');
+    let ttt, xTurn;
+    function tttInit(){
+      ttt = Array(9).fill(''); xTurn = true;
+      tttBoard.innerHTML = '';
+      for(let i=0;i<9;i++){
+        const b = document.createElement('button');
+        b.addEventListener('click', ()=>tttMove(i,b));
+        tttBoard.appendChild(b);
+      }
+      tttStatus.textContent = "Player X's turn";
+    }
+    function tttLine(a,b,c){ return ttt[a] && ttt[a]===ttt[b] && ttt[a]===ttt[c]; }
+    function tttCheck(){
+      const L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+      for(const [a,b,c] of L){ if(tttLine(a,b,c)) return ttt[a]; }
+      if(ttt.every(Boolean)) return 'draw';
+      return null;
+    }
+    function tttMove(i,btn){
+      if(ttt[i]||tttCheck()) return;
+      ttt[i]= xTurn? 'X':'O';
+      btn.textContent = ttt[i];
+      const res = tttCheck();
+      if(res==='X' || res==='O') tttStatus.textContent = res+" wins!";
+      else if(res==='draw') tttStatus.textContent = "It's a draw.";
+      else { xTurn=!xTurn; tttStatus.textContent = `Player ${xTurn?'X':'O'}'s turn`; }
+    }
+    tttReset.addEventListener('click', tttInit);
+
+    // 2048
+    const gridEl = document.getElementById('grid2048');
+    const g2048Status = document.getElementById('g2048Status');
+    const g2048Reset = document.getElementById('g2048Reset');
+    let grid, score;
+
+    function emptyCells(){
+      const e=[]; grid.forEach((v,i)=>{ if(v===0) e.push(i); }); return e;
+    }
+    function addRandom(){
+      const e = emptyCells(); if(!e.length) return; const i=e[Math.floor(Math.random()*e.length)]; grid[i]= Math.random()<.9?2:4; render();
+    }
+    function start2048(){
+      grid = Array(16).fill(0); score=0; addRandom(); addRandom(); render();
+    }
+    function render(){
+      gridEl.innerHTML = '';
+      grid.forEach(v=>{
+        const d=document.createElement('div');
+        d.className = `tile t-${v}`; d.textContent = v||''; gridEl.appendChild(d);
+      });
+      g2048Status.textContent = `Score: ${score}`;
+    }
+    function slide(row){
+      const arr=row.filter(v=>v); while(arr.length<4) arr.push(0);
+      for(let i=0;i<3;i++) if(arr[i] && arr[i]===arr[i+1]){ arr[i]*=2; score+=arr[i]; arr.splice(i+1,1); arr.push(0); }
+      return arr;
+    }
+    function move(dir){
+      let moved=false;
+      const G = [...grid];
+      for(let r=0;r<4;r++){
+        let row = [grid[r*4],grid[r*4+1],grid[r*4+2],grid[r*4+3]];
+        if(dir==='right') row.reverse();
+        if(dir==='up' || dir==='down') row = [grid[r],grid[r+4],grid[r+8],grid[r+12]];
+        if(dir==='down' || dir==='right') row.reverse();
+        row = slide(row);
+        if(dir==='down' || dir==='right') row.reverse();
+        if(dir==='up' || dir==='down'){
+          for(let i=0;i<4;i++) grid[r+i*4]=row[i];
+        }else{
+          for(let i=0;i<4;i++) grid[r*4+i]=row[i];
+        }
+      }
+      for(let i=0;i<16;i++) if(G[i]!==grid[i]) moved=true;
+      if(moved){ addRandom(); checkOver(); }
+      render();
+    }
+    function checkOver(){
+      if(emptyCells().length) return;
+      // try all moves to see if any merge left
+      const dirs=['left','right','up','down'];
+      const clone=(a)=>JSON.parse(JSON.stringify(a));
+      for(const d of dirs){
+        const g=clone(grid); let s=score;
+        grid=[...g]; score=s; move(d);
+        if(emptyCells().length || grid.some((v,i)=>v!==g[i])){ grid=g; score=s; return; }
+        grid=g; score=s;
+      }
+      g2048Status.textContent = `Game

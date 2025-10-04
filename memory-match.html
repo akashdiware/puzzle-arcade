@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory Match - Puzzle Arcade</title>
+  <style>
+    :root {
+      --bg: #0f1226;
+      --panel: #171b39;
+      --accent: #6c8cff;
+      --text: #e9ecff;
+      --muted: #9aa3c7;
+      --tile: #22274f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial;
+      color: var(--text);
+      background: radial-gradient(1200px 700px at 80% -10%, #222a66 0%, transparent 60%),
+                  radial-gradient(900px 500px at 20% -10%, #183058 0%, transparent 60%),
+                  var(--bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    h1 { margin: 0 0 10px 0; font-size: 32px; letter-spacing: .5px; }
+    .muted { color: var(--muted); }
+    .memory {
+      display: grid;
+      grid-template-columns: repeat(4, 90px);
+      gap: 10px;
+      justify-content: center;
+      margin: 20px 0;
+    }
+    .card {
+      width: 90px;
+      height: 110px;
+      perspective: 700px;
+    }
+    .card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.4s;
+      transform-style: preserve-3d;
+      cursor: pointer;
+    }
+    .flipped .card-inner {
+      transform: rotateY(180deg);
+    }
+    .matched .card-inner {
+      opacity: 0.6;
+      cursor: default;
+    }
+    .face {
+      position: absolute;
+      inset: 0;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-size: 36px;
+      backface-visibility: hidden;
+      border: 1px solid #2b3061;
+    }
+    .front {
+      background: linear-gradient(180deg, #1a1f48, #13173b);
+    }
+    .back {
+      background: linear-gradient(180deg, #24307a, #1f285f);
+      transform: rotateY(180deg);
+    }
+    .status {
+      text-align: center;
+      margin: 20px 0;
+      font-size: 18px;
+      color: var(--muted);
+    }
+    .controls {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .btn {
+      background: #1a1f48;
+      border: 1px solid #2b3061;
+      color: var(--text);
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: 0.2s;
+    }
+    .btn:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+    .home-link {
+      margin-top: 20px;
+      text-align: center;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🧠 Memory Match</h1>
+    <p class="muted">Find all matching pairs!</p>
+  </header>
+  
+  <div class="status" id="status">Moves: 0 | Pairs Found: 0/8</div>
+  
+  <div class="memory" id="gameBoard"></div>
+  
+  <div class="controls">
+    <button class="btn" id="resetBtn">New Game</button>
+  </div>
+  
+  <div class="home-link">
+    <a href="index.html">← Back to Arcade</a>
+  </div>
+
+  <script>
+    const emojis = ['🎮', '🎯', '🎲', '🎪', '🎨', '🎭', '🎸', '🎹'];
+    let cards = [];
+    let flippedCards = [];
+    let matchedPairs = 0;
+    let moves = 0;
+    let canFlip = true;
+
+    function initGame() {
+      const gameBoard = document.getElementById('gameBoard');
+      gameBoard.innerHTML = '';
+      cards = [...emojis, ...emojis]
+        .sort(() => Math.random() - 0.5)
+        .map((emoji, index) => ({ emoji, id: index, matched: false }));
+      
+      flippedCards = [];
+      matchedPairs = 0;
+      moves = 0;
+      canFlip = true;
+      updateStatus();
+
+      cards.forEach((card, index) => {
+        const cardEl = document.createElement('div');
+        cardEl.className = 'card';
+        cardEl.innerHTML = `
+          <div class="card-inner">
+            <div class="face front">?</div>
+            <div class="face back">${card.emoji}</div>
+          </div>
+        `;
+        cardEl.addEventListener('click', () => flipCard(index, cardEl));
+        gameBoard.appendChild(cardEl);
+      });
+    }
+
+    function flipCard(index, cardEl) {
+      if (!canFlip || cards[index].matched || flippedCards.includes(index)) return;
+      
+      cardEl.classList.add('flipped');
+      flippedCards.push(index);
+
+      if (flippedCards.length === 2) {
+        moves++;
+        updateStatus();
+        canFlip = false;
+
+        const [first, second] = flippedCards;
+        if (cards[first].emoji === cards[second].emoji) {
+          cards[first].matched = true;
+          cards[second].matched = true;
+          matchedPairs++;
+          
+          setTimeout(() => {
+            document.querySelectorAll('.card')[first].classList.add('matched');
+            document.querySelectorAll('.card')[second].classList.add('matched');
+            flippedCards = [];
+            canFlip = true;
+            updateStatus();
+            
+            if (matchedPairs === emojis.length) {
+              setTimeout(() => {
+                alert(`Congratulations! You won in ${moves} moves! 🎉`);
+              }, 300);
+            }
+          }, 600);
+        } else {
+          setTimeout(() => {
+            document.querySelectorAll('.card')[first].classList.remove('flipped');
+            document.querySelectorAll('.card')[second].classList.remove('flipped');
+            flippedCards = [];
+            canFlip = true;
+          }, 1000);
+        }
+      }
+    }
+
+    function updateStatus() {
+      document.getElementById('status').textContent = 
+        `Moves: ${moves} | Pairs Found: ${matchedPairs}/${emojis.length}`;
+    }
+
+    document.getElementById('resetBtn').addEventListener('click', initGame);
+    
+    initGame();
+  </script>
+</body>
+</html>

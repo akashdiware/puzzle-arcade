@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sliding Tile Puzzle - Puzzle Arcade</title>
+  <style>
+    :root {
+      --bg: #0f1226;
+      --panel: #171b39;
+      --accent: #6c8cff;
+      --text: #e9ecff;
+      --muted: #9aa3c7;
+      --tile: #22274f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial;
+      color: var(--text);
+      background: radial-gradient(1200px 700px at 80% -10%, #222a66 0%, transparent 60%),
+                  radial-gradient(900px 500px at 20% -10%, #183058 0%, transparent 60%),
+                  var(--bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    h1 { margin: 0 0 10px 0; font-size: 32px; letter-spacing: .5px; }
+    .muted { color: var(--muted); }
+    .puzzle-board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      gap: 5px;
+      background: #1a1f48;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid #2b3061;
+      margin: 20px 0;
+    }
+    .tile {
+      background: linear-gradient(180deg, #24307a, #1f285f);
+      border: 1px solid #2b3061;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      user-select: none;
+    }
+    .tile:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 10px rgba(108, 140, 255, 0.5);
+    }
+    .tile.empty {
+      background: transparent;
+      border: 1px dashed #2b3061;
+      cursor: default;
+    }
+    .tile.empty:hover {
+      transform: none;
+      box-shadow: none;
+    }
+    .status {
+      text-align: center;
+      margin: 20px 0;
+      font-size: 18px;
+      color: var(--muted);
+    }
+    .controls {
+      text-align: center;
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    .btn {
+      background: #1a1f48;
+      border: 1px solid #2b3061;
+      color: var(--text);
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: 0.2s;
+    }
+    .btn:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+    .home-link {
+      margin-top: 20px;
+      text-align: center;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .win-message {
+      font-size: 20px;
+      color: #27c93f;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🧩 Sliding Tile Puzzle</h1>
+    <p class="muted">Arrange the tiles in order from 1 to 8!</p>
+  </header>
+  
+  <div class="status" id="status">Moves: 0</div>
+  
+  <div class="puzzle-board" id="puzzleBoard"></div>
+  
+  <div class="controls">
+    <button class="btn" id="shuffleBtn">Shuffle</button>
+    <button class="btn" id="resetBtn">Reset</button>
+  </div>
+  
+  <div class="home-link">
+    <a href="index.html">← Back to Arcade</a>
+  </div>
+
+  <script>
+    let tiles = [1, 2, 3, 4, 5, 6, 7, 8, 0]; // 0 represents the empty space
+    let moves = 0;
+
+    function renderBoard() {
+      const board = document.getElementById('puzzleBoard');
+      board.innerHTML = '';
+      
+      tiles.forEach((tile, index) => {
+        const tileEl = document.createElement('div');
+        tileEl.className = tile === 0 ? 'tile empty' : 'tile';
+        tileEl.textContent = tile === 0 ? '' : tile;
+        tileEl.addEventListener('click', () => moveTile(index));
+        board.appendChild(tileEl);
+      });
+      
+      updateStatus();
+    }
+
+    function moveTile(index) {
+      const emptyIndex = tiles.indexOf(0);
+      const validMoves = getValidMoves(emptyIndex);
+      
+      if (validMoves.includes(index)) {
+        // Swap tiles
+        [tiles[emptyIndex], tiles[index]] = [tiles[index], tiles[emptyIndex]];
+        moves++;
+        renderBoard();
+        
+        if (checkWin()) {
+          setTimeout(() => {
+            document.getElementById('status').innerHTML = 
+              `<span class="win-message">🎉 Congratulations! You won in ${moves} moves!</span>`;
+          }, 100);
+        }
+      }
+    }
+
+    function getValidMoves(emptyIndex) {
+      const validMoves = [];
+      const row = Math.floor(emptyIndex / 3);
+      const col = emptyIndex % 3;
+      
+      // Check up
+      if (row > 0) validMoves.push(emptyIndex - 3);
+      // Check down
+      if (row < 2) validMoves.push(emptyIndex + 3);
+      // Check left
+      if (col > 0) validMoves.push(emptyIndex - 1);
+      // Check right
+      if (col < 2) validMoves.push(emptyIndex + 1);
+      
+      return validMoves;
+    }
+
+    function checkWin() {
+      const winState = [1, 2, 3, 4, 5, 6, 7, 8, 0];
+      return tiles.every((tile, index) => tile === winState[index]);
+    }
+
+    function shuffle() {
+      // Perform random valid moves to ensure solvability
+      moves = 0;
+      for (let i = 0; i < 100; i++) {
+        const emptyIndex = tiles.indexOf(0);
+        const validMoves = getValidMoves(emptyIndex);
+        const randomMove = validMoves[Math.floor(Math.random() * validMoves.length)];
+        [tiles[emptyIndex], tiles[randomMove]] = [tiles[randomMove], tiles[emptyIndex]];
+      }
+      renderBoard();
+    }
+
+    function reset() {
+      tiles = [1, 2, 3, 4, 5, 6, 7, 8, 0];
+      moves = 0;
+      renderBoard();
+    }
+
+    function updateStatus() {
+      document.getElementById('status').textContent = `Moves: ${moves}`;
+    }
+
+    document.getElementById('shuffleBtn').addEventListener('click', shuffle);
+    document.getElementById('resetBtn').addEventListener('click', reset);
+    
+    renderBoard();
+  </script>
+</body>
+</html>
